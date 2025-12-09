@@ -5,6 +5,8 @@ import { motion } from "framer-motion";
 import { UploadCloud, Zap, Database, CheckCircle, BrainCircuit, Network } from "lucide-react";
 
 export default function Home() {
+  // Base URL for backend API. Set `NEXT_PUBLIC_API_BASE` in frontend env (Render/Netlify/Vercel).
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://no-code-ml-pipeline-builder-hoyw.onrender.com';
   const [step, setStep] = useState(1);
   const [dataStats, setDataStats] = useState<any>(null);
   const [selectedTarget, setSelectedTarget] = useState("");
@@ -30,7 +32,7 @@ export default function Home() {
     setSelectedFeatures((prev: string[]) => prev.filter((x: string) => x !== v));
     if (v) {
       try {
-        const resp = await axios.get('https://no-code-ml-pipeline-builder-hoyw.onrender.com/target_stats', { params: { col: v } });
+        const resp = await axios.get(`${API_BASE}/target_stats`, { params: { col: v } });
         setTargetStats(resp.data);
       } catch (err) {
         setTargetStats(null);
@@ -92,7 +94,7 @@ export default function Home() {
     formData.append("file", f);
 
     try {
-      const res = await axios.post("https://no-code-ml-pipeline-builder-hoyw.onrender.com/upload", formData);
+      const res = await axios.post(`${API_BASE}/upload`, formData);
       setDataStats(res.data);
       // derive numeric columns if returned
       const data = res.data as { column_types?: Record<string, string> };
@@ -159,7 +161,7 @@ export default function Home() {
     }
 
     try {
-      const res = await axios.post("https://no-code-ml-pipeline-builder-hoyw.onrender.com/train", formData);
+      const res = await axios.post(`${API_BASE}/train`, formData);
       setResult(res.data);
       setTimeout(() => setStep(4), 1000);
     } catch (err: any) {
@@ -344,7 +346,7 @@ export default function Home() {
                                 const urls = targetStats.top.slice(0,50).map((r: any) => r.value);
                                 try {
                                   setUrlValidation({checking: true});
-                                  const resp = await axios.post('https://no-code-ml-pipeline-builder-hoyw.onrender.com/check_urls', urls);
+                                  const resp = await axios.post(`${API_BASE}/check_urls`, urls);
                                   setUrlValidation(resp.data);
                                 } catch (err) {
                                   setUrlValidation({error: true});
