@@ -97,7 +97,7 @@ export default function Home() {
       // derive numeric columns if returned
       const data = res.data as { column_types?: Record<string, string> };
       const types = data.column_types || {};
-      const nums: string[] = [];
+    const nums: string[] = [];
       Object.keys(types).forEach((k) => {
         const t = types[k];
         if (/int|float|number/i.test(t)) nums.push(k);
