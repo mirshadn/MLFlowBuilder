@@ -30,7 +30,7 @@ export default function Home() {
     setSelectedFeatures((prev: string[]) => prev.filter((x: string) => x !== v));
     if (v) {
       try {
-        const resp = await axios.get('http://localhost:8000/target_stats', { params: { col: v } });
+        const resp = await axios.get('https://no-code-ml-pipeline-builder-hoyw.onrender.com/target_stats', { params: { col: v } });
         setTargetStats(resp.data);
       } catch (err) {
         setTargetStats(null);
@@ -92,7 +92,7 @@ export default function Home() {
     formData.append("file", f);
 
     try {
-      const res = await axios.post("http://localhost:8000/upload", formData);
+      const res = await axios.post("https://no-code-ml-pipeline-builder-hoyw.onrender.com/upload", formData);
       setDataStats(res.data);
       // derive numeric columns if returned
       const types = res.data.column_types || {};
@@ -158,7 +158,7 @@ export default function Home() {
     }
 
     try {
-      const res = await axios.post("http://localhost:8000/train", formData);
+      const res = await axios.post("https://no-code-ml-pipeline-builder-hoyw.onrender.com/train", formData);
       setResult(res.data);
       setTimeout(() => setStep(4), 1000);
     } catch (err: any) {
@@ -343,7 +343,7 @@ export default function Home() {
                                 const urls = targetStats.top.slice(0,50).map((r: any) => r.value);
                                 try {
                                   setUrlValidation({checking: true});
-                                  const resp = await axios.post('http://localhost:8000/check_urls', urls);
+                                  const resp = await axios.post('https://no-code-ml-pipeline-builder-hoyw.onrender.com/check_urls', urls);
                                   setUrlValidation(resp.data);
                                 } catch (err) {
                                   setUrlValidation({error: true});
