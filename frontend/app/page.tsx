@@ -95,7 +95,8 @@ export default function Home() {
       const res = await axios.post("https://no-code-ml-pipeline-builder-hoyw.onrender.com/upload", formData);
       setDataStats(res.data);
       // derive numeric columns if returned
-      const types = res.data.column_types || {};
+      const data = res.data as { column_types?: Record<string, string> };
+      const types = data.column_types || {};
       const nums: string[] = [];
       Object.keys(types).forEach((k) => {
         const t = types[k];
