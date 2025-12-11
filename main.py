@@ -31,6 +31,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ASGI app for deployment
+asgi_app = app
+
 # In-memory storage
 db = {"df": None}
 
