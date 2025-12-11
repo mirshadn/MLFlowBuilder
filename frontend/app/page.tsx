@@ -9,7 +9,7 @@ export default function Home() {
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://mlflowbuilder-1.onrender.com';
   const [step, setStep] = useState(1);
   const [dataStats, setDataStats] = useState<any>(null);
-  const [selectedTarget, setSelectedTarget] = useState("");
+  const [selectedTargets, setSelectedTargets] = useState<string[]>([]);
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [taskType, setTaskType] = useState("auto"); // auto, classification, regression
   const [modelType, setModelType] = useState("logistic");
@@ -28,17 +28,26 @@ export default function Home() {
 
   const handleTargetChange = async (e: ChangeEvent<HTMLSelectElement>) => {
     const v = e.target.value;
-    setSelectedTarget(v);
-    setSelectedFeatures((prev: string[]) => prev.filter((x: string) => x !== v));
     if (v) {
+      setSelectedTargets((prev: string[]) => {
+        if (prev.includes(v)) {
+          // Remove if already selected
+          return prev.filter(t => t !== v);
+        } else if (prev.length < 2) {
+          // Add if not selected and under limit
+          return [...prev, v];
+        } else {
+          // Replace the first one if at limit
+          return [prev[1], v];
+        }
+      });
+      setSelectedFeatures((prev: string[]) => prev.filter((x: string) => x !== v));
       try {
         const resp = await axios.get(`${API_BASE}/target_stats`, { params: { col: v } });
         setTargetStats(resp.data);
       } catch (err) {
         setTargetStats(null);
       }
-    } else {
-      setTargetStats(null);
     }
   };
 
@@ -115,42 +124,59 @@ export default function Home() {
 
   const handleTrain = async () => {
     // Client-side validation to prevent backend errors (e.g. single-class target)
-    if (!selectedTarget) {
-      alert('Please select a target variable before training.');
+    if (selectedTargets.length === 0) {
+      alert('Please select at least one target variable before training.');
       return;
     }
     const colTypes = dataStats?.column_types || {};
     const uniqueCounts = dataStats?.columns_unique_counts || {};
 
+    // For multiple targets, combine them into a single binary target
+    let effectiveTarget = selectedTargets[0];
+    let effectiveTaskType = taskType;
+    let combinedTargetValues: string[] = [];
+
+    if (selectedTargets.length === 2) {
+      // Create binary classification by combining two targets
+      effectiveTaskType = 'classification';
+      combinedTargetValues = selectedTargets;
+    } else {
+      // Single target - use existing logic
+      effectiveTarget = selectedTargets[0];
+    }
+
     // If user forced regression/classification, validate accordingly. If auto, replicate backend heuristic.
-    if (taskType === 'regression') {
-      if (!/int|float|number/i.test(colTypes[selectedTarget] || '')) {
+    if (effectiveTaskType === 'regression') {
+      if (!/int|float|number/i.test(colTypes[effectiveTarget] || '')) {
         alert('Regression: selected target must be numeric. Choose a numeric column.');
         return;
       }
-    } else if (taskType === 'classification') {
-      if ((uniqueCounts[selectedTarget] || 0) < 2) {
-        alert('Classification: target must have at least 2 distinct classes. Choose a different column.');
+    } else if (effectiveTaskType === 'classification') {
+      if (selectedTargets.length === 1 && (uniqueCounts[effectiveTarget] || 0) < 2) {
+        alert('Classification: target must have at least 2 distinct classes. Choose a different column or select two targets for binary classification.');
         return;
       }
     } else {
       // auto: if numeric and (float dtype or many uniques) -> regression, else classification
-      const isNumeric = /int|float|number/i.test(colTypes[selectedTarget] || '');
-      const uniq = uniqueCounts[selectedTarget] || 0;
-      const autoRegression = isNumeric && (String(colTypes[selectedTarget]).startsWith('float') || uniq > 20);
-      if (!autoRegression && uniq < 2) {
-        alert('Selected target appears unsuitable for classification (fewer than 2 classes). Choose a different target or switch task type.');
+      const isNumeric = /int|float|number/i.test(colTypes[effectiveTarget] || '');
+      const uniq = uniqueCounts[effectiveTarget] || 0;
+      const autoRegression = isNumeric && (String(colTypes[effectiveTarget]).startsWith('float') || uniq > 20);
+      if (!autoRegression && uniq < 2 && selectedTargets.length === 1) {
+        alert('Selected target appears unsuitable for classification (fewer than 2 classes). Choose a different target, switch task type, or select two targets for binary classification.');
         return;
       }
     }
 
     setStep(3);
     const formData = new FormData();
-    formData.append("target", selectedTarget);
+    formData.append("target", effectiveTarget);
+    if (combinedTargetValues.length > 0) {
+      formData.append("combined_targets", JSON.stringify(combinedTargetValues));
+    }
     formData.append("features", JSON.stringify(selectedFeatures));
     // send canonical model_type ids (we already use 'logistic' | 'decision_tree' | 'random_forest')
     formData.append("model_type", modelType);
-    formData.append("task_type", taskType);
+    formData.append("task_type", effectiveTaskType);
     if (supportsEpochs) formData.append("epochs", epochs.toString());
     formData.append("preprocess_standardize", JSON.stringify(standardizeCols));
     formData.append("preprocess_normalize", JSON.stringify(normalizeCols));
@@ -297,24 +323,30 @@ export default function Home() {
                   </h4>
 
                   <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Target Variable (Goal)</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Target Variable (Goal) - Select 1 or 2 columns</label>
                     <div className="relative">
                       <select className="w-full bg-black border border-gray-800 rounded-xl p-3 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all appearance-none cursor-pointer"
                         onChange={handleTargetChange}
-                        value={selectedTarget}>
+                        value="">
                         <option value="">Select Column... ({taskType === 'regression' ? 'numeric only' : 'categorical or few unique values'})</option>
                         {dataStats.columns.map((c: string) => {
                           const isSuitable = suitableTargets.includes(c);
+                          const isSelected = selectedTargets.includes(c);
                           return (
-                            <option key={c} value={c} disabled={!isSuitable}>
-                              {c} {!isSuitable ? '(unsupported for ' + taskType + ')' : ''}
+                            <option key={c} value={c} disabled={!isSuitable || (selectedTargets.length >= 2 && !isSelected)}>
+                              {c} {isSelected ? '(selected)' : ''} {!isSuitable ? '(unsupported for ' + taskType + ')' : ''}
                             </option>
                           );
                         })}
                       </select>
                     </div>
-                    {selectedTarget && !suitableTargets.includes(selectedTarget) && (
-                      <p className="text-xs text-red-400 mt-1">⚠️ Selected target may not work for {taskType} task. Switch task type or select a different target.</p>
+                    {selectedTargets.length > 0 && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-400">Selected targets: {selectedTargets.join(', ')}</p>
+                        {selectedTargets.some(t => !suitableTargets.includes(t)) && (
+                          <p className="text-xs text-red-400 mt-1">⚠️ Some selected targets may not work for {taskType} task. Switch task type or select different targets.</p>
+                        )}
+                      </div>
                     )}
                     {targetStats && (
                       <div className="mt-3 bg-black p-3 rounded-md border border-gray-800 text-xs text-gray-300">
@@ -381,7 +413,7 @@ export default function Home() {
                     <label className="block text-sm font-medium text-gray-300 mb-2">Input Features</label>
                     <div className="h-48 overflow-y-auto bg-black rounded-xl border border-gray-800 p-2 space-y-1 custom-scrollbar">
                       {dataStats.columns.map((c: string) => (
-                        c !== selectedTarget && (
+                        !selectedTargets.includes(c) && (
                           <div key={c} onClick={() => setSelectedFeatures((prev: string[]) => prev.includes(c) ? prev.filter((x: string) => x !== c) : [...prev, c])}
                             className={`p-3 rounded-lg cursor-pointer text-sm font-mono flex items-center justify-between transition-all select-none border border-transparent ${selectedFeatures.includes(c) ? "bg-purple-500/10 text-purple-300 border-purple-500/30" : "hover:bg-gray-900 text-gray-500"}`}>
                             {c}
@@ -577,7 +609,7 @@ export default function Home() {
                   </div>
                 </div>
 
-                <button onClick={handleTrain} disabled={!selectedTarget || selectedFeatures.length === 0}
+                <button onClick={handleTrain} disabled={selectedTargets.length === 0 || selectedFeatures.length === 0}
                   className="w-full mt-8 bg-gradient-to-r from-blue-600 to-purple-600 text-white py-4 rounded-xl font-bold text-md shadow-[0_0_30px_rgba(79,70,229,0.3)] hover:shadow-[0_0_50px_rgba(79,70,229,0.5)] transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none">
                   INITIALIZE TRAINING SEQ ⚡
                 </button>

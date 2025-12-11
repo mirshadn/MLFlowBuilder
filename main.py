@@ -121,6 +121,7 @@ async def train_model(
     epochs: int = Form(100),
     task_type: str = Form("auto"),
     allowed_target_values: str = Form("[]"),
+    combined_targets: str = Form("[]"),
 ):
     df = db.get("df")
     if df is None:
@@ -150,6 +151,21 @@ async def train_model(
     # Prepare X/y (do not one-hot encode yet for simplicity; only numeric preprocessing allowed per UI)
     X = df[feat_list].copy()
     y = df[target].copy()
+
+    # Handle combined targets for binary classification
+    try:
+        combined_targets_list = json.loads(combined_targets)
+        if isinstance(combined_targets_list, list) and len(combined_targets_list) == 2:
+            # Create binary target by combining two columns
+            col1, col2 = combined_targets_list
+            if col1 in df.columns and col2 in df.columns:
+                # Combine into binary: 0 if both are equal, 1 if different
+                y = (df[col1] != df[col2]).astype(int)
+                logger.info(f"Created binary target from {col1} and {col2}")
+            else:
+                raise HTTPException(status_code=400, detail=f"Combined target columns {col1} and {col2} not found in dataset")
+    except Exception as e:
+        logger.info(f"Failed to parse combined_targets: {e} -- raw: {combined_targets}")
 
     # If frontend provided an allowed list of target values, filter dataset accordingly (useful for URL validation)
     try:
