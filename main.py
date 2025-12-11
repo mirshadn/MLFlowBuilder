@@ -17,9 +17,8 @@ from typing import Optional, List
 import requests
 import json
 import uvicorn
-from a2wsgi import ASGIMiddleware
 
-app = ASGIMiddleware(FastAPI())
+app = FastAPI()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

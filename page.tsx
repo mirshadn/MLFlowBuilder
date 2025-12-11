@@ -1,27 +1,49 @@
 "use client";
-import { useState, ChangeEvent } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { UploadCloud, Zap, Database, CheckCircle, BrainCircuit } from "lucide-react";
 
 interface DataStats {
   columns: string[];
+  rows: number;
+  column_types: Record<string, string>;
+  columns_unique_counts: Record<string, number>;
 }
 
 interface Result {
   accuracy: number;
+  task_type: string;
+  mse?: number;
+  mae?: number;
+  rmse?: number;
+  r2?: number;
+  precision?: number;
+  recall?: number;
+  f1?: number;
+  confusion_matrix?: number[][];
+  labels?: string[];
+  too_many_classes?: boolean;
+  train_size: number;
+  test_size: number;
+  split_ratio: number;
+  preprocessing: {
+    standardize: string[];
+    normalize: string[];
+  };
+  details: string;
 }
 
 export default function Home() {
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState<number>(1);
   const [dataStats, setDataStats] = useState<DataStats | null>(null);
-  const [selectedTarget, setSelectedTarget] = useState("");
+  const [selectedTarget, setSelectedTarget] = useState<string>("");
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
-  const [modelType, setModelType] = useState("logistic");
-  const [epochs, setEpochs] = useState(100);
+  const [modelType, setModelType] = useState<string>("logistic");
+  const [epochs, setEpochs] = useState<number>(100);
   const [result, setResult] = useState<Result | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [trainingLoading, setTrainingLoading] = useState(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [trainingLoading, setTrainingLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
@@ -56,7 +78,8 @@ export default function Home() {
       setDataStats(res.data);
       setLoading(false);
       setStep(2);
-    } catch {
+    } catch (error) {
+      console.error("Upload error:", error);
       setError("Error: Backend is offline. Please check your backend server.");
       setLoading(false);
     }
@@ -78,7 +101,8 @@ export default function Home() {
       setTrainingLoading(false);
       // Wait 1.5 seconds so user enjoys the animation
       setTimeout(() => setStep(4), 1500);
-    } catch {
+    } catch (error) {
+      console.error("Training error:", error);
       setError("Training failed. Please select a valid target column (categorical or numeric).");
       setTrainingLoading(false);
       setStep(2);

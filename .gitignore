@@ -6,6 +6,7 @@ __pycache__/
 env/
 venv/
 backend_env/
+venv_brain/
 
 # Node / Next
 frontend/node_modules/
