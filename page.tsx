@@ -1,18 +1,30 @@
 "use client";
-import { useState, type ChangeEvent } from "react";
+import { useState, ChangeEvent } from "react";
 import axios from "axios";
-import { motion } from "framer-motion"; 
+import { motion } from "framer-motion";
 import { UploadCloud, Zap, Database, CheckCircle, BrainCircuit } from "lucide-react";
+
+interface DataStats {
+  columns: string[];
+}
+
+interface Result {
+  accuracy: number;
+}
 
 export default function Home() {
   const [step, setStep] = useState(1);
-  const [dataStats, setDataStats] = useState<any>(null);
+  const [dataStats, setDataStats] = useState<DataStats | null>(null);
   const [selectedTarget, setSelectedTarget] = useState("");
   const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
   const [modelType, setModelType] = useState("logistic");
   const [epochs, setEpochs] = useState(100);
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<Result | null>(null);
   const [loading, setLoading] = useState(false);
+  const [trainingLoading, setTrainingLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
   // --- HANDLERS ---
 
@@ -21,26 +33,39 @@ export default function Home() {
         const files = e.currentTarget.files;
         if (!files || files.length === 0) return;
 
-        setLoading(true);
         const f = files[0];
+        // Client-side validation
+        if (f.size > 10 * 1024 * 1024) { // 10MB limit
+            setError("File size must be less than 10MB");
+            return;
+        }
+        const allowedTypes = ['text/csv', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'];
+        if (!allowedTypes.includes(f.type)) {
+            setError("Please upload a CSV or Excel file");
+            return;
+        }
+
+        setLoading(true);
+        setError(null);
         const formData = new FormData();
         formData.append("file", f);
 
     try {
       // 2. Call Python Backend
-      const res = await axios.post("http://localhost:8000/upload", formData);
+      const res = await axios.post(`${backendUrl}/upload`, formData);
       setDataStats(res.data);
       setLoading(false);
       setStep(2);
-    } catch (err) {
-      alert("Error: Python Backend is offline. Run 'python main.py' in your backend terminal.");
+    } catch {
+      setError("Error: Backend is offline. Please check your backend server.");
       setLoading(false);
     }
   };
 
   const handleTrain = async () => {
-    setStep(3); // Start loading animation
-    
+    setTrainingLoading(true);
+    setError(null);
+
     const formData = new FormData();
     formData.append("target", selectedTarget);
     formData.append("features", JSON.stringify(selectedFeatures));
@@ -48,12 +73,14 @@ export default function Home() {
     formData.append("epochs", epochs.toString());
 
     try {
-      const res = await axios.post("http://localhost:8000/train", formData);
+      const res = await axios.post(`${backendUrl}/train`, formData);
       setResult(res.data);
+      setTrainingLoading(false);
       // Wait 1.5 seconds so user enjoys the animation
-      setTimeout(() => setStep(4), 1500); 
-    } catch (err) {
-      alert("Training failed. Please select a valid target column (categorical or numeric).");
+      setTimeout(() => setStep(4), 1500);
+    } catch {
+      setError("Training failed. Please select a valid target column (categorical or numeric).");
+      setTrainingLoading(false);
       setStep(2);
     }
   };
@@ -118,6 +145,11 @@ export default function Home() {
                     )}
                 </div>
             </div>
+            {error && (
+                <div className="mt-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm text-center">
+                    {error}
+                </div>
+            )}
           </motion.div>
         )}
 
@@ -145,7 +177,7 @@ export default function Home() {
                             <div className="mb-6">
                                 <label className="block text-sm font-medium text-gray-300 mb-2">Target Variable (Goal)</label>
                                 <select className="w-full bg-black border border-gray-800 rounded-xl p-3 text-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none transition-all appearance-none cursor-pointer"
-                                    onChange={(e: ChangeEvent<HTMLSelectElement>) => {
+                                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
                                         const v = e.target.value;
                                         setSelectedTarget(v);
                                         setSelectedFeatures((prev: string[]) => prev.filter((x: string) => x !== v));
@@ -198,7 +230,7 @@ export default function Home() {
                                     <label className="text-xs font-mono text-gray-500 uppercase">Training Iterations</label>
                                     <span className="text-xs font-mono text-blue-400">{epochs} EPOCHS</span>
                                  </div>
-                                 <input type="range" min="100" max="1000" step="50" value={epochs} onChange={(e) => setEpochs(Number(e.target.value))}
+                                 <input type="range" min="100" max="1000" step="50" value={epochs} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEpochs(Number(e.target.value))}
                                    className="w-full h-1 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
                              </div>
                          </div>
