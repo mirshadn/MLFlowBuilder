@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: no-code-ml-frontend
+    runtime: node
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE
+        value: https://mlflowbuilder-1.onrender.com
