@@ -6,7 +6,7 @@ import { UploadCloud, Zap, Database, CheckCircle, BrainCircuit, Network } from "
 
 export default function Home() {
   // Base URL for backend API. Set `NEXT_PUBLIC_API_BASE` in frontend env (Render/Netlify/Vercel).
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://no-code-ml-pipeline-builder-hoyw.onrender.com';
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'https://mlflowbuilder-1.onrender.com';
   const [step, setStep] = useState(1);
   const [dataStats, setDataStats] = useState<any>(null);
   const [selectedTarget, setSelectedTarget] = useState("");
