@@ -19,7 +19,7 @@ import json
 import uvicorn
 from a2wsgi import ASGIMiddleware
 
-app = FastAPI()
+app = ASGIMiddleware(FastAPI())
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ app.add_middleware(
 asgi_app = app
 
 # WSGI app for deployment
-wsgi_app = ASGIMiddleware(app)
+wsgi_app = app
 
 # In-memory storage
 db = {"df": None}
