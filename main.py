@@ -17,6 +17,7 @@ from typing import Optional, List
 import requests
 import json
 import uvicorn
+from a2wsgi import ASGIMiddleware
 
 app = FastAPI()
 
@@ -33,6 +34,9 @@ app.add_middleware(
 
 # ASGI app for deployment
 asgi_app = app
+
+# WSGI app for deployment
+wsgi_app = ASGIMiddleware(app)
 
 # In-memory storage
 db = {"df": None}
