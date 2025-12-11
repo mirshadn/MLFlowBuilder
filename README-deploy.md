@@ -1,52 +1,95 @@
-Deployment guide — quick steps to publish frontend and backend
+# No-Code ML Pipeline Builder - Deployment Guide
 
-Overview
-- Frontend: Next.js app located in `frontend/` — recommended to deploy to Vercel.
-- Backend: FastAPI app `main.py` — recommended to deploy to Render (Python) or any Docker-capable host.
+## Current Deployment Status
 
-Files added
-- `requirements.txt` — backend dependencies
-- `Dockerfile` — backend Docker image
-- `Procfile` — start command for Procfile-based hosts
-- `.gitignore` — ignores venvs, node_modules, build artifacts
+### ✅ Backend (Deployed)
+- **Platform**: Render
+- **URL**: https://mlflowbuilder-1.onrender.com
+- **Status**: Live and running
+- **Features**: Binary classification, ML model training, data preprocessing
 
-Prepare repository
-1. Initialize git (if not already):
-   ```powershell
-   cd 'c:\Users\moham\Downloads\No-Code ML Pipeline Builder'
-   git init
-   git add .
-   git commit -m "Add project with deployment helper files"
-   ```
+### 🔄 Frontend (Local Development)
+- **Platform**: Next.js running locally
+- **URL**: http://localhost:3000
+- **Status**: Ready for deployment to Vercel
 
-Push to GitHub (create repo under your account `mirshadn`)
-1. Create a new repo on GitHub named `No-Code-ML-Pipeline-Builder` (via web UI).
-2. Add remote and push (HTTPS):
-   ```bash
-   git remote add origin https://github.com/mirshadn/No-Code-ML-Pipeline-Builder.git
-   git branch -M main
-   git push -u origin main
-   ```
+### 📦 Repository
+- **GitHub**: https://github.com/mirshadn/MLFlowBuilder
+- **Branch**: main
+- **Status**: All code synchronized and up-to-date
 
-Frontend (Vercel)
-1. Sign in to Vercel and Import Project -> select GitHub repo.
-2. Set Framework to Next.js; Root Directory: `frontend`.
-3. Vercel will auto-detect and deploy. After deploy you'll get a public URL.
+## Deployment Files
 
-Backend (Render - quickest non-Docker option)
-1. Sign in to Render (https://render.com) and click "New" -> "Web Service".
-2. Connect GitHub and pick your repo and branch.
-3. Environment: Python. Build command: `pip install -r requirements.txt` (or leave blank if Render auto-detects). Start command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
-4. Deploy. Render will provide a public URL (e.g., https://your-app.onrender.com).
+- `render.yaml` — Render deployment configuration for backend
+- `requirements.txt` — Python dependencies for backend
+- `Procfile` — Alternative start command for Procfile-based hosts
+- `.gitignore` — Ignores virtual environments, node_modules, build artifacts
 
-Backend (Docker-based hosting)
-- If using Render Docker, ECS, or similar, build and push Docker image using `Dockerfile`.
+## Backend Deployment (Already Completed)
 
-Environment variables
-- If you later add secrets, configure them in the host (Vercel/Render) environment settings.
+The backend is successfully deployed to Render with the following configuration:
 
-Testing
-- After both services are deployed, update the frontend to point to the backend URL (if needed) or configure a proxy.
+```yaml
+services:
+  - type: web
+    name: no-code-ml-backend
+    runtime: python3.12
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+```
 
-Need help
-- Tell me whether you want me to create the Git commit locally (I will) and then I will provide the exact commands to create the GitHub repo and push. I will not push on your behalf.
+**API Endpoints Available:**
+- `POST /upload` — Upload CSV/Excel datasets
+- `GET /target_stats` — Get column statistics
+- `POST /train` — Train ML models with binary classification support
+
+## Frontend Deployment (Optional)
+
+To deploy the frontend to Vercel:
+
+1. Sign in to [Vercel](https://vercel.com) and click "New Project"
+2. Import from GitHub and select your `MLFlowBuilder` repository
+3. Configure:
+   - **Framework Preset**: Next.js
+   - **Root Directory**: `frontend`
+   - **Build Command**: `npm run build`
+   - **Output Directory**: `.next`
+4. Add Environment Variable:
+   - **Name**: `NEXT_PUBLIC_API_BASE`
+   - **Value**: `https://mlflowbuilder-1.onrender.com`
+5. Click "Deploy"
+
+## Features Implemented
+
+- **Binary Classification**: Select 1 or 2 target columns (solves "target must have at least 2 classes" error)
+- **Drag-and-Drop Upload**: Support for CSV and Excel files
+- **Real-time Training**: Live model training with progress indicators
+- **Multiple Models**: Logistic Regression, Decision Tree, Random Forest, etc.
+- **Performance Metrics**: Comprehensive evaluation for classification and regression
+
+## Local Development
+
+To run locally:
+
+```bash
+# Backend
+python main.py
+
+# Frontend (new terminal)
+cd frontend
+npm install
+npm run dev
+```
+
+## Environment Variables
+
+- `NEXT_PUBLIC_API_BASE`: Backend API URL (set to Render URL for production)
+- `PORT`: Automatically set by Render for backend deployment
+
+## Support
+
+The application is fully functional with:
+- ✅ Backend deployed and tested
+- ✅ Frontend running locally
+- ✅ All features implemented and working
+- ✅ Code synchronized with GitHub
